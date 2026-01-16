@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Environment files (contain secrets)
+.env
+.env.local
+.env.*.local
+
+# Database
+data/*.db
+data/*.db-journal
+
+# Next.js
+.next/
+out/
+
+# Build
+build/
+dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Temp scripts
+scripts/*.js
+scripts/*.mjs
+!scripts/README.md
