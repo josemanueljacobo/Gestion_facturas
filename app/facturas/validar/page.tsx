@@ -371,12 +371,158 @@ function ValidarFacturaContent() {
                             </div>
                         </div>
 
-                        <div className="form-group">
+                        {/* Desglose de IVA */}
+                        <div style={{ marginTop: '24px', padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>Desglose de IVA</h3>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const newLine = { base_imponible: 0, porcentaje_iva: 21, cuota_iva: 0 };
+                                        setFormData((prev: any) => ({
+                                            ...prev,
+                                            lineas_iva: [...(prev.lineas_iva || []), newLine]
+                                        }));
+                                    }}
+                                    className="btn btn-secondary"
+                                    style={{ padding: '4px 8px', fontSize: '12px' }}
+                                >
+                                    + Añadir Línea
+                                </button>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {(formData.lineas_iva || []).map((linea: any, index: number) => (
+                                    <div key={index} style={{
+                                        display: 'flex',
+                                        gap: '8px',
+                                        alignItems: 'flex-start',
+                                        padding: '12px',
+                                        backgroundColor: 'white',
+                                        borderRadius: '6px',
+                                        border: '1px solid #e5e7eb'
+                                    }}>
+                                        <div style={{ flex: 2 }}>
+                                            <label style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Base</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                className="form-input"
+                                                value={linea.base_imponible}
+                                                onChange={(e) => {
+                                                    const val = parseFloat(e.target.value) || 0;
+                                                    const lines = [...formData.lineas_iva];
+                                                    lines[index].base_imponible = val;
+                                                    lines[index].cuota_iva = parseFloat((val * (lines[index].porcentaje_iva / 100)).toFixed(2));
+
+                                                    // Sync totals
+                                                    const totalBase = lines.reduce((acc, curr) => acc + curr.base_imponible, 0);
+                                                    const totalIva = lines.reduce((acc, curr) => acc + curr.cuota_iva, 0);
+
+                                                    setFormData((prev: any) => ({
+                                                        ...prev,
+                                                        lineas_iva: lines,
+                                                        base_imponible_total: parseFloat(totalBase.toFixed(2)),
+                                                        iva_total: parseFloat(totalIva.toFixed(2)),
+                                                        total_factura: parseFloat((totalBase + totalIva - (prev.importe_retencion || 0)).toFixed(2))
+                                                    }));
+                                                }}
+                                            />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>% IVA</label>
+                                            <select
+                                                className="form-select"
+                                                value={linea.porcentaje_iva}
+                                                onChange={(e) => {
+                                                    const val = parseInt(e.target.value) || 0;
+                                                    const lines = [...formData.lineas_iva];
+                                                    lines[index].porcentaje_iva = val;
+                                                    lines[index].cuota_iva = parseFloat((lines[index].base_imponible * (val / 100)).toFixed(2));
+
+                                                    // Sync totals
+                                                    const totalIva = lines.reduce((acc, curr) => acc + curr.cuota_iva, 0);
+
+                                                    setFormData((prev: any) => ({
+                                                        ...prev,
+                                                        lineas_iva: lines,
+                                                        iva_total: parseFloat(totalIva.toFixed(2)),
+                                                        total_factura: parseFloat((prev.base_imponible_total + totalIva - (prev.importe_retencion || 0)).toFixed(2))
+                                                    }));
+                                                }}
+                                            >
+                                                <option value="21">21%</option>
+                                                <option value="10">10%</option>
+                                                <option value="4">4%</option>
+                                                <option value="0">0% / Exento</option>
+                                            </select>
+                                        </div>
+                                        <div style={{ flex: 2 }}>
+                                            <label style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Cuota</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                className="form-input"
+                                                value={linea.cuota_iva}
+                                                onChange={(e) => {
+                                                    const val = parseFloat(e.target.value) || 0;
+                                                    const lines = [...formData.lineas_iva];
+                                                    lines[index].cuota_iva = val;
+
+                                                    const totalIva = lines.reduce((acc, curr) => acc + curr.cuota_iva, 0);
+                                                    setFormData((prev: any) => ({
+                                                        ...prev,
+                                                        lineas_iva: lines,
+                                                        iva_total: parseFloat(totalIva.toFixed(2)),
+                                                        total_factura: parseFloat((prev.base_imponible_total + totalIva - (prev.importe_retencion || 0)).toFixed(2))
+                                                    }));
+                                                }}
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const lines = formData.lineas_iva.filter((_: any, i: number) => i !== index);
+                                                const totalBase = lines.reduce((acc: any, curr: any) => acc + curr.base_imponible, 0);
+                                                const totalIva = lines.reduce((acc: any, curr: any) => acc + curr.cuota_iva, 0);
+
+                                                setFormData((prev: any) => ({
+                                                    ...prev,
+                                                    lineas_iva: lines,
+                                                    base_imponible_total: totalBase,
+                                                    iva_total: totalIva,
+                                                    total_factura: (totalBase + totalIva - (prev.importe_retencion || 0))
+                                                }));
+                                            }}
+                                            style={{
+                                                marginTop: '22px',
+                                                background: 'none',
+                                                border: 'none',
+                                                color: '#ef4444',
+                                                cursor: 'pointer',
+                                                padding: '4px'
+                                            }}
+                                            title="Eliminar línea"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                ))}
+                                {(formData.lineas_iva || []).length === 0 && (
+                                    <div style={{ textAlign: 'center', padding: '12px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                        No hay desgloses de IVA añadidos.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="form-group" style={{ marginTop: '24px' }}>
                             <label className="form-label">Total Factura</label>
                             <input
                                 type="number"
                                 step="0.01"
                                 className="form-input"
+                                style={{ fontWeight: '700', fontSize: '16px', backgroundColor: '#f9fafb' }}
                                 value={formData.total_factura}
                                 onChange={(e) => setFormData({ ...formData, total_factura: parseFloat(e.target.value) })}
                                 required

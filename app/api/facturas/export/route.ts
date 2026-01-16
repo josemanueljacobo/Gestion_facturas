@@ -34,14 +34,36 @@ export async function POST(request: NextRequest) {
         // Note: Factusol import formats vary, but a common one for Received Invoices (FRE) 
         // involves multiple bases/ivas on the same row.
 
+        // Prepare data for Factusol
         const exportData = invoicesData.map(row => {
             const f = row.factura;
             const c = row.contacto;
             const d = row.departamento;
-            const lines = allLines.filter(l => l.factura_id === f.id);
+            let lines = allLines.filter(l => l.factura_id === f.id);
+
+            // Fallback: If no detailed lines but invoice has totals, create a surrogate line
+            if (lines.length === 0 && (f.base_imponible_total > 0 || f.iva_total > 0)) {
+                let calculatedPct = 0;
+                if (f.base_imponible_total > 0) {
+                    calculatedPct = Math.round((f.iva_total / f.base_imponible_total) * 100);
+                    // Standardize to common VAT rates if very close
+                    if (Math.abs(calculatedPct - 21) <= 1) calculatedPct = 21;
+                    else if (Math.abs(calculatedPct - 10) <= 1) calculatedPct = 10;
+                    else if (Math.abs(calculatedPct - 4) <= 1) calculatedPct = 4;
+                }
+
+                lines = [{
+                    id: 'fallback',
+                    factura_id: f.id,
+                    base_imponible: f.base_imponible_total,
+                    porcentaje_iva: calculatedPct,
+                    cuota_iva: f.iva_total,
+                    porcentaje_recargo: 0,
+                    cuota_recargo: 0,
+                } as any];
+            }
 
             // Factusol standard usually has columns for up to 3 context lines
-            // Let's create a map that matches typical FRE structure
             const data: any = {
                 'ID': f.asiento_contable_id || '',
                 'FECHA': f.fecha_emision ? new Date(f.fecha_emision).toLocaleDateString('es-ES') : '',
