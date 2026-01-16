@@ -11,15 +11,29 @@ export async function GET(request: NextRequest) {
         const estado = searchParams.get('estado');
         const trimestre = searchParams.get('trimestre'); // T1, T2, T3, T4
         const empresaId = searchParams.get('empresa_id');
+        const fechaDesde = searchParams.get('fecha_desde');
+        const fechaHasta = searchParams.get('fecha_hasta');
+        const proveedor = searchParams.get('proveedor');
 
         // Apply filters
-        const conditions = [];
+        const { like, or } = await import('drizzle-orm');
+        const conditions: any[] = [];
         if (estado) {
             conditions.push(eq(facturas.estado, estado as any));
         }
 
         if (empresaId) {
             conditions.push(eq(facturas.empresa_id, empresaId));
+        }
+
+        if (fechaDesde) {
+            conditions.push(gte(facturas.fecha_emision, new Date(fechaDesde)));
+        }
+
+        if (fechaHasta) {
+            const end = new Date(fechaHasta);
+            end.setHours(23, 59, 59, 999);
+            conditions.push(lte(facturas.fecha_emision, end));
         }
 
         if (trimestre) {
@@ -43,8 +57,8 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        const validConditions = conditions.length > 0 ? and(...conditions) : undefined;
-
+        // We'll handle the provider filter differently because it's a join condition
+        // But for SQLite/Drizzle simple where is fine if we join first.
         const results = await db
             .select({
                 factura: facturas,
@@ -52,7 +66,16 @@ export async function GET(request: NextRequest) {
             })
             .from(facturas)
             .leftJoin(contactos, eq(facturas.contacto_id, contactos.id))
-            .where(validConditions)
+            .where(() => {
+                const wheres = [...conditions];
+                if (proveedor) {
+                    wheres.push(or(
+                        like(contactos.nombre_fiscal, `%${proveedor}%`),
+                        like(contactos.nombre_comercial, `%${proveedor}%`)
+                    ) as any);
+                }
+                return wheres.length > 0 ? and(...wheres) : undefined;
+            })
             .orderBy(desc(facturas.fecha_emision))
             .limit(limit);
 

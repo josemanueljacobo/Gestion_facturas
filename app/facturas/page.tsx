@@ -40,9 +40,17 @@ export default function FacturasPage() {
     const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+    // Advanced filters
+    const [fechaDesde, setFechaDesde] = useState<string>('');
+    const [fechaHasta, setFechaHasta] = useState<string>('');
+    const [proveedorSearch, setProveedorSearch] = useState<string>('');
+
     useEffect(() => {
-        fetchInvoices();
-    }, [filter, trimestre, selectedEmpresaId]);
+        const timer = setTimeout(() => {
+            fetchInvoices();
+        }, 300); // Small debounce for provider search
+        return () => clearTimeout(timer);
+    }, [filter, trimestre, selectedEmpresaId, fechaDesde, fechaHasta, proveedorSearch]);
 
     const toggleSelection = (id: string) => {
         setSelectedIds(prev =>
@@ -163,6 +171,15 @@ export default function FacturasPage() {
             if (selectedEmpresaId) {
                 url += `&empresa_id=${selectedEmpresaId}`;
             }
+            if (fechaDesde) {
+                url += `&fecha_desde=${fechaDesde}`;
+            }
+            if (fechaHasta) {
+                url += `&fecha_hasta=${fechaHasta}`;
+            }
+            if (proveedorSearch) {
+                url += `&proveedor=${encodeURIComponent(proveedorSearch)}`;
+            }
 
             const res = await fetch(url);
             const data = await res.json();
@@ -227,7 +244,7 @@ export default function FacturasPage() {
             const res = await fetch('/api/facturas/export', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ invoiceIds: [] }),
+                body: JSON.stringify({ invoiceIds: selectedIds }),
             });
 
             if (!res.ok) throw new Error('Export failed');
@@ -351,6 +368,37 @@ export default function FacturasPage() {
                         </select>
                     </div>
 
+                    <div style={{ flex: 1, minWidth: '200px' }}>
+                        <label className="form-label">Desde Fecha</label>
+                        <input
+                            type="date"
+                            className="form-select"
+                            value={fechaDesde}
+                            onChange={(e) => setFechaDesde(e.target.value)}
+                        />
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: '200px' }}>
+                        <label className="form-label">Hasta Fecha</label>
+                        <input
+                            type="date"
+                            className="form-select"
+                            value={fechaHasta}
+                            onChange={(e) => setFechaHasta(e.target.value)}
+                        />
+                    </div>
+
+                    <div style={{ flex: 2, minWidth: '250px' }}>
+                        <label className="form-label">Buscar Proveedor</label>
+                        <input
+                            type="text"
+                            className="form-select"
+                            placeholder="Nombre fiscal o comercial..."
+                            value={proveedorSearch}
+                            onChange={(e) => setProveedorSearch(e.target.value)}
+                        />
+                    </div>
+
                     <div>
                         <label className="form-label">Trimestre</label>
                         <select
@@ -367,6 +415,29 @@ export default function FacturasPage() {
                         </select>
                     </div>
                 </div>
+                {(fechaDesde || fechaHasta || proveedorSearch || filter !== 'all' || trimestre) && (
+                    <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+                        <button
+                            onClick={() => {
+                                setFechaDesde('');
+                                setFechaHasta('');
+                                setProveedorSearch('');
+                                setFilter('all');
+                                setTrimestre('');
+                            }}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--color-danger)',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                textDecoration: 'underline'
+                            }}
+                        >
+                            Limpiar todos los filtros
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Invoices Table */}
@@ -533,6 +604,19 @@ export default function FacturasPage() {
                         style={{ borderRadius: '20px', padding: '8px 20px' }}
                     >
                         ✅ Validar
+                    </button>
+                    <button
+                        onClick={handleExport}
+                        className="btn"
+                        style={{
+                            borderRadius: '20px',
+                            padding: '8px 20px',
+                            backgroundColor: '#e0e7ff',
+                            color: '#4338ca',
+                            border: '1px solid #c7d2fe'
+                        }}
+                    >
+                        💾 Exportar Factusol
                     </button>
                     <button
                         onClick={handleBulkDelete}
