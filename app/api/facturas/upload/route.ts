@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
     try {
         const formData = await request.formData();
         const file = formData.get('file') as File;
+        const empresaId = formData.get('empresa_id') as string | null;
 
         if (!file) {
             return NextResponse.json(
@@ -164,6 +165,7 @@ export async function POST(request: NextRequest) {
             // Create invoice in database immediately with pending status
             const [createdInvoice] = await db.insert(facturas).values({
                 tipo: 'recibida',
+                empresa_id: empresaId || null,
                 contacto_id: contacto_id,
                 numero_factura: extractedData.numero_factura || `TEMP-${timestamp}`,
                 fecha_emision: extractedData.fecha_emision

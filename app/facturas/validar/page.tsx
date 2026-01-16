@@ -141,6 +141,12 @@ function ValidarFacturaContent() {
                 throw new Error('Debes seleccionar una empresa en el menú lateral');
             }
 
+            // Validate retention type if invoice has retention
+            const hasRetention = (formData.porcentaje_retencion > 0 || formData.importe_retencion > 0);
+            if (hasRetention && (!formData.tipo_retencion || formData.tipo_retencion === 0)) {
+                throw new Error('Debes seleccionar el tipo de retención para facturas con retención');
+            }
+
             const res = await fetch(`/api/facturas/${formData.invoiceId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },

@@ -111,6 +111,12 @@ export default function FacturasPage() {
     };
 
     const handleFileSelect = async (files: File[]) => {
+        // Check if empresa is selected
+        if (!selectedEmpresaId) {
+            alert('⚠️ Debes seleccionar una empresa en el menú lateral antes de subir facturas');
+            return;
+        }
+
         const newUploads = files.map(file => ({
             file,
             status: 'uploading' as const,
@@ -124,6 +130,7 @@ export default function FacturasPage() {
                 // Upload file
                 const formData = new FormData();
                 formData.append('file', file);
+                formData.append('empresa_id', selectedEmpresaId);
 
                 const res = await fetch('/api/facturas/upload', {
                     method: 'POST',
@@ -303,11 +310,22 @@ export default function FacturasPage() {
                 <div className="card" style={{ padding: '48px', textAlign: 'center' }}>
                     Cargando...
                 </div>
+            ) : !selectedEmpresaId ? (
+                <div className="card" style={{ padding: '48px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏛️</div>
+                    <h3 style={{ marginBottom: '8px' }}>Selecciona una empresa</h3>
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                        Usa el selector en el menú lateral para elegir la empresa con la que quieres trabajar
+                    </p>
+                </div>
             ) : invoices.length === 0 ? (
                 <div className="card" style={{ padding: '48px', textAlign: 'center' }}>
                     <div style={{ fontSize: '48px', marginBottom: '16px' }}>📄</div>
                     <p style={{ color: 'var(--text-secondary)' }}>
-                        No hay facturas que mostrar
+                        No hay facturas para esta empresa
+                    </p>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '8px' }}>
+                        Sube una factura usando el botón de arriba
                     </p>
                 </div>
             ) : (
