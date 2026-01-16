@@ -10,11 +10,16 @@ export async function GET(request: NextRequest) {
         const limit = parseInt(searchParams.get('limit') || '50');
         const estado = searchParams.get('estado');
         const trimestre = searchParams.get('trimestre'); // T1, T2, T3, T4
+        const empresaId = searchParams.get('empresa_id');
 
         // Apply filters
         const conditions = [];
         if (estado) {
             conditions.push(eq(facturas.estado, estado as any));
+        }
+
+        if (empresaId) {
+            conditions.push(eq(facturas.empresa_id, empresaId));
         }
 
         if (trimestre) {

@@ -2,15 +2,15 @@
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
+import { useEmpresa } from '@/lib/context/EmpresaContext';
 
 function ValidarFacturaContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const { selectedEmpresa, selectedEmpresaId } = useEmpresa();
     const [loading, setLoading] = useState(false);
     const [contacts, setContacts] = useState<any[]>([]);
     const [departamentos, setDepartamentos] = useState<any[]>([]);
-    const [empresas, setEmpresas] = useState<any[]>([]);
-    const [selectedEmpresaCif, setSelectedEmpresaCif] = useState<string>('');
     const [formData, setFormData] = useState<any>({
         tipo: 'recibida',
         empresa_id: '',
@@ -113,28 +113,19 @@ function ValidarFacturaContent() {
             .then(data => setDepartamentos(data))
             .catch(console.error);
 
-        // Fetch empresas
-        fetch('/api/empresas')
-            .then(res => res.json())
-            .then(data => setEmpresas(data))
-            .catch(console.error);
-
         loadData();
     }, [searchParams]);
 
-    // Update selected empresa CIF when empresa changes
+    // Auto-set empresa_id from global context when it changes
     useEffect(() => {
-        if (formData.empresa_id) {
-            const empresa = empresas.find(e => e.id === formData.empresa_id);
-            setSelectedEmpresaCif(empresa?.cif_nif || '');
-        } else {
-            setSelectedEmpresaCif('');
+        if (selectedEmpresaId && !formData.empresa_id) {
+            setFormData((prev: any) => ({ ...prev, empresa_id: selectedEmpresaId }));
         }
-    }, [formData.empresa_id, empresas]);
+    }, [selectedEmpresaId]);
 
     // Filter contacts to exclude those with same CIF as selected empresa
     const availableContacts = contacts.filter(
-        contact => !selectedEmpresaCif || contact.cif_nif !== selectedEmpresaCif
+        contact => !selectedEmpresa || contact.cif_nif !== selectedEmpresa.cif_nif
     );
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -146,10 +137,14 @@ function ValidarFacturaContent() {
                 throw new Error('No invoice ID available');
             }
 
+            if (!selectedEmpresaId) {
+                throw new Error('Debes seleccionar una empresa en el menú lateral');
+            }
+
             const res = await fetch(`/api/facturas/${formData.invoiceId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({ ...formData, empresa_id: selectedEmpresaId }),
             });
 
             if (!res.ok) {
@@ -197,27 +192,31 @@ function ValidarFacturaContent() {
                     backgroundColor: 'var(--bg-primary)'
                 }}>
                     <form onSubmit={handleSubmit}>
-                        {/* Empresa Selector */}
+                        {/* Empresa - Read-only from global context */}
                         <div className="form-group">
-                            <label className="form-label">Empresa *</label>
-                            <select
-                                className="form-select"
-                                value={formData.empresa_id}
-                                onChange={(e) => {
-                                    setFormData({ ...formData, empresa_id: e.target.value, contacto_id: '' });
-                                }}
-                                required
-                            >
-                                <option value="">Seleccionar empresa...</option>
-                                {empresas.map((empresa) => (
-                                    <option key={empresa.id} value={empresa.id}>
-                                        {empresa.nombre_comercial || empresa.nombre_fiscal} ({empresa.cif_nif})
-                                    </option>
-                                ))}
-                            </select>
-                            {empresas.length === 0 && (
-                                <div className="form-hint" style={{ color: '#DC2626' }}>
-                                    ⚠️ No hay empresas. <a href="/empresas" style={{ color: 'var(--primary)' }}>Crea una primero</a>
+                            <label className="form-label">Empresa</label>
+                            {selectedEmpresa ? (
+                                <div style={{
+                                    padding: '10px 12px',
+                                    backgroundColor: 'var(--bg-secondary)',
+                                    borderRadius: '6px',
+                                    border: '1px solid var(--border-light)',
+                                    fontSize: '14px'
+                                }}>
+                                    <strong>{selectedEmpresa.nombre_comercial || selectedEmpresa.nombre_fiscal}</strong>
+                                    <span style={{ color: 'var(--text-secondary)', marginLeft: '8px' }}>
+                                        ({selectedEmpresa.cif_nif})
+                                    </span>
+                                </div>
+                            ) : (
+                                <div style={{
+                                    padding: '12px',
+                                    backgroundColor: '#FEF3C7',
+                                    border: '1px solid #F59E0B',
+                                    borderRadius: '6px',
+                                    color: '#92400E'
+                                }}>
+                                    ⚠️ Selecciona una empresa en el menú lateral para continuar
                                 </div>
                             )}
                         </div>
@@ -229,7 +228,7 @@ function ValidarFacturaContent() {
                                 value={formData.contacto_id}
                                 onChange={(e) => setFormData({ ...formData, contacto_id: e.target.value })}
                                 required
-                                disabled={!formData.empresa_id}
+                                disabled={!selectedEmpresa}
                             >
                                 <option value="">Seleccionar...</option>
                                 {availableContacts.map((contact) => (
@@ -238,7 +237,7 @@ function ValidarFacturaContent() {
                                     </option>
                                 ))}
                             </select>
-                            {formData.empresa_id && availableContacts.length === 0 && contacts.length > 0 && (
+                            {selectedEmpresa && availableContacts.length === 0 && contacts.length > 0 && (
                                 <div className="form-hint" style={{ color: '#F59E0B' }}>
                                     ⚠️ Todos los contactos tienen el mismo CIF que la empresa
                                 </div>

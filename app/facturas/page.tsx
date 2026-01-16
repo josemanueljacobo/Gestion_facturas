@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import FileUpload from '@/components/ui/FileUpload';
 import Link from 'next/link';
 import StatusBadge from '@/components/ui/StatusBadge';
+import { useEmpresa } from '@/lib/context/EmpresaContext';
 
 interface Invoice {
     id: string;
@@ -26,6 +27,7 @@ interface UploadingFile {
 }
 
 export default function FacturasPage() {
+    const { selectedEmpresa, selectedEmpresaId } = useEmpresa();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
     const [filter, setFilter] = useState<string>('all');
@@ -35,7 +37,7 @@ export default function FacturasPage() {
 
     useEffect(() => {
         fetchInvoices();
-    }, [filter, trimestre]);
+    }, [filter, trimestre, selectedEmpresaId]);
 
     const toggleSelection = (id: string) => {
         setSelectedIds(prev =>
@@ -93,6 +95,9 @@ export default function FacturasPage() {
             }
             if (trimestre) {
                 url += `&trimestre=${trimestre}`;
+            }
+            if (selectedEmpresaId) {
+                url += `&empresa_id=${selectedEmpresaId}`;
             }
 
             const res = await fetch(url);

@@ -1,6 +1,7 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import Sidebar from '@/components/layout/Sidebar'
+import Providers from '@/components/Providers'
 
 export const metadata: Metadata = {
     title: 'Sistema de Gestión de Facturas',
@@ -15,12 +16,14 @@ export default function RootLayout({
     return (
         <html lang="es">
             <body>
-                <div style={{ display: 'flex', minHeight: '100vh' }}>
-                    <Sidebar />
-                    <main style={{ flex: 1, marginLeft: '240px' }}>
-                        {children}
-                    </main>
-                </div>
+                <Providers>
+                    <div style={{ display: 'flex', minHeight: '100vh' }}>
+                        <Sidebar />
+                        <main style={{ flex: 1, marginLeft: '240px' }}>
+                            {children}
+                        </main>
+                    </div>
+                </Providers>
             </body>
         </html>
     )
