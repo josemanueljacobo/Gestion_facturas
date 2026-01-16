@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { facturas, contactos, lineas_iva } from '@/lib/db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { facturas, contactos, lineas_iva, departamentos } from '@/lib/db/schema';
+import { eq, and, gte, lte, desc, inArray } from 'drizzle-orm';
 import * as XLSX from 'xlsx';
 
 export async function POST(request: NextRequest) {
@@ -13,14 +13,16 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'No invoice IDs provided' }, { status: 400 });
         }
 
-        // Fetch invoices with contacts and lines
+        // Fetch invoices with contacts, departments and lines
         const invoicesData = await db
             .select({
                 factura: facturas,
                 contacto: contactos,
+                departamento: departamentos,
             })
             .from(facturas)
             .leftJoin(contactos, eq(facturas.contacto_id, contactos.id))
+            .leftJoin(departamentos, eq(facturas.departamento_id, departamentos.id))
             .where(inArray(facturas.id, invoiceIds));
 
         const allLines = await db
@@ -35,6 +37,7 @@ export async function POST(request: NextRequest) {
         const exportData = invoicesData.map(row => {
             const f = row.factura;
             const c = row.contacto;
+            const d = row.departamento;
             const lines = allLines.filter(l => l.factura_id === f.id);
 
             // Factusol standard usually has columns for up to 3 context lines
@@ -45,6 +48,7 @@ export async function POST(request: NextRequest) {
                 'FACTURA': f.numero_factura,
                 'PROVEEDOR': c?.cif_nif || '',
                 'NOMBRE': c?.nombre_fiscal || '',
+                'DEP': d?.codigo || '', // Departamento factura
                 'BASE1': lines[0]?.base_imponible || 0,
                 'IVA1': lines[0]?.porcentaje_iva || 0,
                 'CUOTA1': lines[0]?.cuota_iva || 0,
