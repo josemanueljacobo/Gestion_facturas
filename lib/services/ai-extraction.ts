@@ -144,6 +144,57 @@ Instrucciones críticas:
                     quotaError = error;
                 }
 
+                // Handle 503 Service Unavailable / Model overloaded - retry with backoff
+                if (error.message.includes('503') || error.message.includes('overloaded')) {
+                    console.log('Model overloaded, retrying with exponential backoff...');
+                    const maxRetries = 3;
+                    for (let retry = 0; retry < maxRetries; retry++) {
+                        const waitTime = Math.pow(2, retry + 1) * 2000; // 4s, 8s, 16s
+                        console.log(`Retry ${retry + 1}/${maxRetries} after ${waitTime}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
+
+                        try {
+                            const model = genAI.getGenerativeModel({ model: modelName });
+                            const retryResult = await model.generateContent([
+                                `Analiza esta factura y extrae los datos en formato JSON con campos: cif_nif, nombre_empresa, numero_factura, fecha_emision (YYYY-MM-DD), base_imponible, iva_cuota, total, lineas_iva, recargo_equivalencia, porcentaje_retencion, importe_retencion. Responde SOLO con JSON.`,
+                                {
+                                    inlineData: {
+                                        data: fileBuffer.toString('base64'),
+                                        mimeType,
+                                    },
+                                },
+                            ]);
+
+                            const retryText = (await retryResult.response).text();
+                            let retryJson = retryText;
+                            const retryMatch = retryText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                            if (retryMatch) {
+                                retryJson = retryMatch[1];
+                            } else {
+                                const start = retryText.indexOf('{');
+                                const end = retryText.lastIndexOf('}');
+                                if (start !== -1 && end !== -1) {
+                                    retryJson = retryText.substring(start, end + 1);
+                                }
+                            }
+
+                            data = JSON.parse(retryJson);
+                            if (data && (data.cif_nif || data.total || data.numero_factura)) {
+                                console.log(`Retry ${retry + 1} succeeded!`);
+                                break;
+                            }
+                        } catch (retryError: any) {
+                            console.warn(`Retry ${retry + 1} failed:`, retryError.message);
+                            if (retry === maxRetries - 1) {
+                                lastError = retryError;
+                            }
+                        }
+                    }
+
+                    if (data) break; // Exit model loop if retry succeeded
+                    continue; // Try next model if all retries failed
+                }
+
                 lastError = error;
 
                 if (error.message.includes('API_KEY_INVALID')) {
