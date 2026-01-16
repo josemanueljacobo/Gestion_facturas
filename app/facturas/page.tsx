@@ -79,6 +79,34 @@ export default function FacturasPage() {
         // Get selected invoices for validation checks
         const selectedInvoices = invoices.filter(inv => selectedIds.includes(inv.id));
 
+        // Check for already validated invoices
+        const alreadyValidated = selectedInvoices.filter(inv =>
+            inv.estado === 'validada' || inv.estado === 'exportada'
+        );
+
+        if (alreadyValidated.length > 0) {
+            const allValidated = alreadyValidated.length === selectedInvoices.length;
+            if (allValidated) {
+                alert('ℹ️ Todas las facturas seleccionadas ya están validadas o exportadas.');
+                return;
+            }
+            const invoiceNumbers = alreadyValidated.map(inv => inv.numero_factura).join(', ');
+            const pendingCount = selectedInvoices.length - alreadyValidated.length;
+            const proceed = confirm(
+                `ℹ️ Las siguientes facturas ya están validadas/exportadas:\n\n${invoiceNumbers}\n\n` +
+                `Se validarán solo las ${pendingCount} facturas pendientes. ¿Continuar?`
+            );
+            if (!proceed) return;
+            // Filter to only pending invoices
+            const pendingIds = selectedInvoices
+                .filter(inv => inv.estado === 'pendiente_revision')
+                .map(inv => inv.id);
+            if (pendingIds.length === 0) return;
+            // Update selectedIds to only pending
+            selectedIds.length = 0;
+            selectedIds.push(...pendingIds);
+        }
+
         // Check for retention without type
         const invoicesWithRetentionNoType = selectedInvoices.filter(inv =>
             (inv.porcentaje_retencion && inv.porcentaje_retencion > 0 || inv.importe_retencion && inv.importe_retencion > 0) &&
