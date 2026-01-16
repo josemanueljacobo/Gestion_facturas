@@ -57,7 +57,7 @@ export const facturas = sqliteTable('facturas', {
     // Factusol Accounting Fields
     bien_inversion: integer('bien_inversion', { mode: 'boolean' }).default(false), // Col CK
     tipo_retencion: integer('tipo_retencion').default(0), // Col CM (0=None, 1=Prof, etc.)
-    clave_operacion: integer('clave_operacion').default(0), // Col CN (0=Habitual, etc.)
+    clave_operacion: text('clave_operacion').default(''), // Col CN (letter codes: A, B, C, etc.)
     fecha_operacion: integer('fecha_operacion', { mode: 'timestamp' }), // Col CO
 
     // Factusol export data

@@ -30,7 +30,7 @@ function ValidarFacturaContent() {
         // Accounting fields
         bien_inversion: false,
         tipo_retencion: 0,
-        clave_operacion: 0,
+        clave_operacion: '',
         fecha_operacion: '',
     });
 
@@ -88,7 +88,7 @@ function ValidarFacturaContent() {
 
                     bien_inversion: invoice.bien_inversion || false,
                     tipo_retencion: invoice.tipo_retencion || 0,
-                    clave_operacion: invoice.clave_operacion || 0,
+                    clave_operacion: invoice.clave_operacion || '',
                     fecha_operacion: invoice.fecha_operacion ? new Date(invoice.fecha_operacion).toISOString().split('T')[0] : '',
 
                     invoiceId: invoiceId, // Store for update
@@ -408,17 +408,51 @@ function ValidarFacturaContent() {
                             {/* Clave Operación (CN) */}
                             <div className="form-group">
                                 <label className="form-label">Clave de Operación</label>
+                                {/* IVA Exento Warning */}
+                                {(formData.lineas_iva?.some((l: any) => l.porcentaje_iva === 0) || formData.iva_total === 0) && (
+                                    <div style={{
+                                        padding: '8px 12px',
+                                        backgroundColor: '#FEF3C7',
+                                        border: '1px solid #F59E0B',
+                                        borderRadius: '6px',
+                                        marginBottom: '8px',
+                                        fontSize: '13px',
+                                        color: '#92400E'
+                                    }}>
+                                        ⚠️ Esta factura tiene IVA exento/0%. Revisa si necesitas cambiar la clave de operación (ej: Q, I, P, etc.)
+                                    </div>
+                                )}
                                 <select
                                     className="form-select"
                                     value={formData.clave_operacion}
-                                    onChange={(e) => setFormData({ ...formData, clave_operacion: parseInt(e.target.value) })}
+                                    onChange={(e) => setFormData({ ...formData, clave_operacion: e.target.value })}
                                 >
-                                    <option value="0">0 - Operación habitual</option>
-                                    <option value="1">1 - (A) Asiento resumen de facturas</option>
-                                    <option value="2">2 - (B) Asiento resumen de tickets</option>
-                                    <option value="3">3 - (C) Facturas con varios asientos</option>
-                                    <option value="4">4 - (D) Factura rectificativa</option>
-                                    <option value="5">5 - (E) Factura rectificativa (Importe pos.)</option>
+                                    <option value="">Operación habitual</option>
+                                    <option value="A">A - Asiento resumen de facturas</option>
+                                    <option value="B">B - Asiento resumen de tiques</option>
+                                    <option value="C">C - Factura con varios asientos (varios tipos impositivos)</option>
+                                    <option value="D">D - Factura rectificativa</option>
+                                    <option value="E">E - IVA devengado pendiente de emitir factura</option>
+                                    <option value="G">G - Régimen especial de grupo de entidades en IVA/IGIC</option>
+                                    <option value="H">H - Régimen especial de oro de inversión</option>
+                                    <option value="I">I - Inversión del Sujeto Pasivo (ISP)</option>
+                                    <option value="J">J - Tiques / Facturas simplificadas</option>
+                                    <option value="K">K - Rectificación anotaciones registrales</option>
+                                    <option value="M">M - IVA facturado pendiente de devengar (emitida factura)</option>
+                                    <option value="N">N - Facturación prestaciones agencias viaje (mediación)</option>
+                                    <option value="O">O - Factura en sustitución de tiques facturados</option>
+                                    <option value="Q">Q - Régimen especial de bienes usados</option>
+                                    <option value="F">F - Adquisiciones agencias viajes directamente al viajero</option>
+                                    <option value="L">L - Adquisiciones a comerciantes minoristas del IGIC</option>
+                                    <option value="P">P - Adquisiciones intracomunitarias de bienes</option>
+                                    <option value="R">R - Operación de arrendamiento de local de negocio</option>
+                                    <option value="S">S - Subvenciones, auxilios o ayudas</option>
+                                    <option value="T">T - Cobros por cuenta de terceros</option>
+                                    <option value="U">U - Operación de seguros</option>
+                                    <option value="V">V - Compras agencias viajes (mediación transporte)</option>
+                                    <option value="W">W - Operación sujeta IPSI (Ceuta y Melilla)</option>
+                                    <option value="X">X - Compensaciones agrícolas/ganaderas/pesqueras</option>
+                                    <option value="Z">Z - Operación genérica de IVA de CAJA</option>
                                 </select>
                             </div>
 
