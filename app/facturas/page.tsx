@@ -12,11 +12,16 @@ interface Invoice {
     fecha_emision: string;
     estado: 'pendiente_revision' | 'validada' | 'exportada';
     total_factura: number;
+    iva_total: number;
     contacto?: {
         nombre_comercial: string;
         cif_nif: string;
     };
     nivel_confianza?: number;
+    porcentaje_retencion?: number;
+    importe_retencion?: number;
+    tipo_retencion?: number;
+    clave_operacion?: string;
 }
 
 interface UploadingFile {
@@ -71,6 +76,36 @@ export default function FacturasPage() {
     };
 
     const handleBulkValidate = async () => {
+        // Get selected invoices for validation checks
+        const selectedInvoices = invoices.filter(inv => selectedIds.includes(inv.id));
+
+        // Check for retention without type
+        const invoicesWithRetentionNoType = selectedInvoices.filter(inv =>
+            (inv.porcentaje_retencion && inv.porcentaje_retencion > 0 || inv.importe_retencion && inv.importe_retencion > 0) &&
+            (!inv.tipo_retencion || inv.tipo_retencion === 0)
+        );
+
+        if (invoicesWithRetentionNoType.length > 0) {
+            const invoiceNumbers = invoicesWithRetentionNoType.map(inv => inv.numero_factura).join(', ');
+            alert(`⚠️ Las siguientes facturas tienen retención pero no tipo de retención seleccionado:\n\n${invoiceNumbers}\n\nEdita cada factura individualmente para asignar el tipo de retención.`);
+            return;
+        }
+
+        // Check for IVA exento (0%)
+        const invoicesWithExemptIVA = selectedInvoices.filter(inv =>
+            inv.iva_total === 0 && (!inv.clave_operacion || inv.clave_operacion === '')
+        );
+
+        if (invoicesWithExemptIVA.length > 0) {
+            const invoiceNumbers = invoicesWithExemptIVA.map(inv => inv.numero_factura).join(', ');
+            const proceed = confirm(
+                `⚠️ Las siguientes facturas tienen IVA 0% y la clave de operación por defecto:\n\n${invoiceNumbers}\n\n` +
+                `Puede que necesiten una clave especial (I=ISP, P=Intracomunitaria, Q=Bienes usados, etc.)\n\n` +
+                `¿Deseas continuar de todas formes?`
+            );
+            if (!proceed) return;
+        }
+
         try {
             const res = await fetch('/api/facturas', {
                 method: 'PATCH',
@@ -80,6 +115,7 @@ export default function FacturasPage() {
             if (res.ok) {
                 fetchInvoices();
                 setSelectedIds([]);
+                alert('✅ Facturas validadas correctamente');
             } else {
                 alert('Error al validar');
             }
