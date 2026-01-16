@@ -57,6 +57,7 @@ export async function PUT(
         const [updated] = await db
             .update(facturas)
             .set({
+                empresa_id: body.empresa_id || null,
                 contacto_id: body.contacto_id,
                 departamento_id: body.departamento_id || null, // Handle optional/empty
                 numero_factura: body.numero_factura,

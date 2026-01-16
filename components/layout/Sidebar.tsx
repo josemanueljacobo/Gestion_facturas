@@ -9,6 +9,7 @@ export default function Sidebar() {
 
     const navItems = [
         { href: '/', label: 'Dashboard', icon: '📊' },
+        { href: '/empresas', label: 'Empresas', icon: '🏛️' },
         { href: '/facturas', label: 'Facturas', icon: '📄' },
         { href: '/contactos', label: 'Contactos', icon: '👥' },
         { href: '/departamentos', label: 'Departamentos', icon: '🏢' },

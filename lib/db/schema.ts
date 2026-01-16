@@ -1,6 +1,18 @@
 import { sqliteTable, text, real, integer } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
+// Empresas (Companies managed by the system)
+export const empresas = sqliteTable('empresas', {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    cif_nif: text('cif_nif').unique().notNull(),
+    nombre_fiscal: text('nombre_fiscal').notNull(),
+    nombre_comercial: text('nombre_comercial'),
+    direccion: text('direccion'),
+    email: text('email'),
+    telefono: text('telefono'),
+    created_at: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+});
+
 // Contactos (Suppliers and Clients)
 export const contactos = sqliteTable('contactos', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -19,6 +31,7 @@ export const contactos = sqliteTable('contactos', {
 export const facturas = sqliteTable('facturas', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
     tipo: text('tipo', { enum: ['recibida', 'emitida'] }).notNull(),
+    empresa_id: text('empresa_id').references(() => empresas.id),
     contacto_id: text('contacto_id').references(() => contactos.id, { onDelete: 'cascade' }),
     numero_factura: text('numero_factura').notNull(),
     fecha_emision: integer('fecha_emision', { mode: 'timestamp' }).notNull(),
@@ -77,6 +90,8 @@ export const departamentos = sqliteTable('departamentos', {
 });
 
 // Type exports for TypeScript
+export type Empresa = typeof empresas.$inferSelect;
+export type NewEmpresa = typeof empresas.$inferInsert;
 export type Contacto = typeof contactos.$inferSelect;
 export type NewContacto = typeof contactos.$inferInsert;
 export type Factura = typeof facturas.$inferSelect;
