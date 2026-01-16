@@ -240,6 +240,19 @@ export default function FacturasPage() {
 
 
     const handleExport = async () => {
+        // Check for already exported invoices
+        const selectedInvoices = invoices.filter(inv => selectedIds.includes(inv.id));
+        const alreadyExported = selectedInvoices.filter(inv => inv.estado === 'exportada');
+
+        if (alreadyExported.length > 0) {
+            const invoiceNumbers = alreadyExported.map(inv => inv.numero_factura).join(', ');
+            const proceed = confirm(
+                `⚠️ Las siguientes facturas ya han sido exportadas anteriormente:\n\n${invoiceNumbers}\n\n` +
+                `¿Estás seguro de que quieres volver a exportarlas?`
+            );
+            if (!proceed) return;
+        }
+
         try {
             const res = await fetch('/api/facturas/export', {
                 method: 'POST',
