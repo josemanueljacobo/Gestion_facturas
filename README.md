@@ -13,8 +13,8 @@ Aplicación web para gestionar facturas con extracción automática de datos med
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/TU_USUARIO/app-facturas.git
-cd app-facturas
+git clone https://github.com/josemanueljacobo/Gestion_facturas.git
+cd Gestion_facturas
 ```
 
 ### 2. Instalar dependencias
