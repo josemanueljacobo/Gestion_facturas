@@ -12,7 +12,12 @@ interface Empresa {
     telefono?: string;
 }
 
+import { useEmpresa } from '@/lib/context/EmpresaContext';
+
 export default function EmpresasPage() {
+    // We can also access refreshEmpresas from the context to update the global list (Sidebar)
+    const { refreshEmpresas: refreshGlobalEmpresas } = useEmpresa();
+
     const [empresas, setEmpresas] = useState<Empresa[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -65,7 +70,12 @@ export default function EmpresasPage() {
             setShowForm(false);
             setEditingId(null);
             setFormData({ cif_nif: '', nombre_fiscal: '', nombre_comercial: '', direccion: '', email: '', telefono: '' });
+
+            // Refresh local list
             fetchEmpresas();
+            // Refresh global context (Sidebar)
+            refreshGlobalEmpresas();
+
         } catch (error) {
             console.error('Error:', error);
             alert('Error al guardar la empresa');
@@ -92,6 +102,8 @@ export default function EmpresasPage() {
             const res = await fetch(`/api/empresas/${id}`, { method: 'DELETE' });
             if (res.ok) {
                 fetchEmpresas();
+                // Refresh global context (Sidebar)
+                refreshGlobalEmpresas();
             }
         } catch (error) {
             console.error('Error:', error);

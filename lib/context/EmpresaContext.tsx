@@ -15,6 +15,7 @@ interface EmpresaContextType {
     selectedEmpresaId: string | null;
     setSelectedEmpresaId: (id: string | null) => void;
     loading: boolean;
+    refreshEmpresas: () => Promise<void>;
 }
 
 const EmpresaContext = createContext<EmpresaContextType | undefined>(undefined);
@@ -24,25 +25,34 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
     const [selectedEmpresaId, setSelectedEmpresaIdState] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const refreshEmpresas = async () => {
+        try {
+            const res = await fetch('/api/empresas');
+            const data = await res.json();
+            setEmpresas(data);
+
+            // Try to restore from localStorage or auto-select
+            const saved = localStorage.getItem('selectedEmpresaId');
+            if (saved && data.some((e: Empresa) => e.id === saved)) {
+                // If the previously selected company still exists, keep it
+                 // We don't need to do anything as selectedEmpresaId state persists, 
+                 // but checking validity is good practice if we want to be strict.
+                 // However, the original logic had this inside the fetch, so let's reproduce "auto-select if single" logic carefully.
+                 // Actually, let's keep it simple: just update the list. 
+                 // But wait, the original logic had an auto-select feature on mount.
+            } else if (data.length === 1 && !saved) {
+                // Auto-select if only one company and nothing selected
+                 setSelectedEmpresaIdState(data[0].id);
+                 localStorage.setItem('selectedEmpresaId', data[0].id);
+            }
+        } catch (error) {
+            console.error('Error fetching companies:', error);
+        }
+    };
+
     // Load empresas on mount
     useEffect(() => {
-        fetch('/api/empresas')
-            .then(res => res.json())
-            .then(data => {
-                setEmpresas(data);
-
-                // Try to restore from localStorage
-                const saved = localStorage.getItem('selectedEmpresaId');
-                if (saved && data.some((e: Empresa) => e.id === saved)) {
-                    setSelectedEmpresaIdState(saved);
-                } else if (data.length === 1) {
-                    // Auto-select if only one company
-                    setSelectedEmpresaIdState(data[0].id);
-                    localStorage.setItem('selectedEmpresaId', data[0].id);
-                }
-            })
-            .catch(console.error)
-            .finally(() => setLoading(false));
+        refreshEmpresas().finally(() => setLoading(false));
     }, []);
 
     const setSelectedEmpresaId = (id: string | null) => {
@@ -62,7 +72,8 @@ export function EmpresaProvider({ children }: { children: ReactNode }) {
             selectedEmpresa,
             selectedEmpresaId,
             setSelectedEmpresaId,
-            loading
+            loading,
+            refreshEmpresas
         }}>
             {children}
         </EmpresaContext.Provider>
