@@ -202,11 +202,19 @@ export async function PATCH(request: NextRequest) {
         const { inArray } = await import('drizzle-orm');
         const ids = body.ids;
 
+        // Prepare update data
+        const updateData: any = {
+            estado: body.estado,
+            updated_at: new Date()
+        };
+
+        // If reverting from exportada to validada, clear fecha_exportacion
+        if (body.estado === 'validada') {
+            updateData.fecha_exportacion = null;
+        }
+
         await db.update(facturas)
-            .set({
-                estado: body.estado,
-                updated_at: new Date()
-            })
+            .set(updateData)
             .where(inArray(facturas.id, ids));
 
         return NextResponse.json({ success: true, count: ids.length });

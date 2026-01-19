@@ -18,12 +18,12 @@ export default function ExportarPage() {
 
             if (!res.ok) throw new Error('Error generating export');
 
-            // Download CSV file
+            // Download Excel file
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `factusol_${trimestre}_${ano}.csv`;
+            a.download = `FRE.xls`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -44,7 +44,7 @@ export default function ExportarPage() {
                     Exportar a Factusol
                 </h1>
                 <p style={{ color: 'var(--text-secondary)' }}>
-                    Genera archivos CSV para importar en Factusol
+                    Genera archivo Excel (FRE.xls) para importar en Factusol
                 </p>
             </div>
 
@@ -96,7 +96,7 @@ export default function ExportarPage() {
                     disabled={loading}
                     style={{ width: '100%' }}
                 >
-                    {loading ? 'Generando exportación...' : '📤 Generar y Descargar CSV'}
+                    {loading ? 'Generando exportación...' : '📤 Generar y Descargar Excel'}
                 </button>
             </div>
 
@@ -105,18 +105,14 @@ export default function ExportarPage() {
                 <div className="card-header">Formato de Exportación</div>
                 <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                     <p style={{ marginBottom: '12px' }}>
-                        El archivo CSV incluirá las siguientes columnas:
+                        El archivo Excel (FRE.xls) sigue el formato oficial de Factusol para facturas recibidas con:
                     </p>
                     <ul style={{ paddingLeft: '20px', margin: 0 }}>
-                        <li>CIF/NIF del proveedor/cliente</li>
-                        <li>Código contable</li>
-                        <li>Nombre fiscal</li>
-                        <li>Número de factura</li>
-                        <li>Fecha de emisión</li>
-                        <li>Base imponible</li>
-                        <li>IVA total</li>
-                        <li>Total factura</li>
-                        <li>Tipo (COMPRA/VENTA)</li>
+                        <li>76 columnas (A-CT) según especificación Factusol</li>
+                        <li>Datos del proveedor (NIF, nombre, dirección)</li>
+                        <li>Información de la factura (número, fecha, importes)</li>
+                        <li>Desglose de IVA (hasta 3 tipos impositivos)</li>
+                        <li>Campos adicionales de contabilidad y gestión</li>
                     </ul>
                 </div>
             </div>

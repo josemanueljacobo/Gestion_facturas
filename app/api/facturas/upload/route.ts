@@ -4,7 +4,7 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { extractInvoiceData } from '@/lib/services/ai-extraction';
 import { db } from '@/lib/db';
-import { contactos, facturas, lineas_iva } from '@/lib/db/schema';
+import { contactos, facturas, lineas_iva, empresas } from '@/lib/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 
 export async function POST(request: NextRequest) {
@@ -68,7 +68,22 @@ export async function POST(request: NextRequest) {
 
         try {
             if (process.env.GEMINI_API_KEY) {
-                extractedData = await extractInvoiceData(buffer, file.type);
+                // Fetch empresa CIF if empresa_id is provided
+                let empresaCif: string | undefined;
+                if (empresaId) {
+                    const [empresa] = await db
+                        .select()
+                        .from(empresas)
+                        .where(eq(empresas.id, empresaId))
+                        .limit(1);
+
+                    if (empresa) {
+                        empresaCif = empresa.cif_nif;
+                        console.log(`Active empresa CIF: ${empresaCif}`);
+                    }
+                }
+
+                extractedData = await extractInvoiceData(buffer, file.type, empresaCif);
             } else {
                 console.warn('GEMINI_API_KEY not configured - skipping AI extraction');
                 extractedData.error = 'GEMINI_API_KEY_MISSING';

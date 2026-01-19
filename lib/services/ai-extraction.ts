@@ -25,7 +25,8 @@ export interface ExtractedInvoiceData {
 
 export async function extractInvoiceData(
     fileBuffer: Buffer,
-    mimeType: string
+    mimeType: string,
+    empresaCif?: string
 ): Promise<ExtractedInvoiceData> {
     // DEBUG: Check API Key loading
     const apiKey = process.env.GEMINI_API_KEY;
@@ -34,9 +35,8 @@ export async function extractInvoiceData(
     try {
         console.log(`Starting AI extraction for file type: ${mimeType}, size: ${fileBuffer.length} bytes`);
         const modelsToTry = [
-            'gemini-flash-latest', // Only try the one we know works in script
-            // 'gemini-1.5-flash',
-            // 'gemini-1.5-pro', 
+            'gemini-2.0-flash', // Use available 2.0 version
+            'gemini-2.0-flash-lite',   // Fallback
         ];
 
         let data: ExtractedInvoiceData | null = null;
@@ -49,6 +49,11 @@ export async function extractInvoiceData(
             try {
                 console.log(`Attempting extraction with model: ${modelName}`);
                 const model = genAI.getGenerativeModel({ model: modelName });
+
+                // Build prompt with empresa CIF instruction if provided
+                const empresaCifInstruction = empresaCif
+                    ? `\n\nATENCIÓN CRÍTICA: Si encuentras el CIF "${empresaCif}" en el documento, ese es el CIF de la empresa CLIENTE/DESTINATARIO. NO es el CIF que debes extraer. Debes buscar OTRO CIF DIFERENTE que sea del PROVEEDOR/EMISOR de la factura. El proveedor es quien emite la factura, no quien la recibe.\n`
+                    : '';
 
                 const result = await model.generateContent([
                     `Analiza esta factura y extrae los siguientes datos en formato JSON:
@@ -73,8 +78,9 @@ export async function extractInvoiceData(
   "porcentaje_retencion": número (porcentaje de IRPF si aplica, ej: 15. Si no, 0),
   "importe_retencion": número (importe total de la retención IRPF. Si no, 0)
 }
-
+${empresaCifInstruction}
 Instrucciones críticas:
+- El "cif_nif" debe ser del PROVEEDOR/EMISOR (quien emite la factura), NO del cliente/destinatario
 - Si la factura tiene múltiples tipos de IVA (21%, 10%, 4%), incluye todas las líneas en "lineas_iva"
 - Los números deben ser valores numéricos, no strings
 - El CIF debe tener formato español (letra + 8 dígitos) si es posible
@@ -117,6 +123,22 @@ Instrucciones críticas:
                     console.error('JSON Parse Error:', parseError);
                     console.log('Offending JSON string:', jsonString);
                     throw new Error('Failed to parse AI response as JSON');
+                }
+
+                // VALIDATE: Check if extracted CIF matches empresa CIF
+                if (empresaCif && data && data.cif_nif) {
+                    const normalizeForComparison = (cif: string) => cif.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    const extractedCifNormalized = normalizeForComparison(data.cif_nif);
+                    const empresaCifNormalized = normalizeForComparison(empresaCif);
+
+                    if (extractedCifNormalized === empresaCifNormalized) {
+                        console.warn(`⚠️  WARNING: AI extracted empresa CIF (${empresaCif}) instead of supplier CIF!`);
+                        console.warn('This is likely incorrect. Setting confidence to 0.3 and flagging for review.');
+                        // Lower confidence significantly to flag for manual review
+                        if (data.confidence !== undefined) {
+                            data.confidence = Math.min(data.confidence, 0.3);
+                        }
+                    }
                 }
 
                 // Validate JSON content quality
@@ -230,15 +252,15 @@ Instrucciones críticas:
         let totalConfidence = 0;
 
         for (const field of requiredFields) {
-            const value = data[field];
+            const value = data[field as keyof ExtractedInvoiceData];
             let confidence = 0;
 
             if (value && value !== '' && value !== 0) {
                 if (field === 'cif_nif') {
                     // Spanish CIF format validation
-                    confidence = /^[A-Z]\d{8}$/i.test(value) ? 1.0 : 0.6;
+                    confidence = /^[A-Z]\d{8}$/i.test(value as string) ? 1.0 : 0.6;
                 } else if (field === 'fecha_emision') {
-                    confidence = /^\d{4}-\d{2}-\d{2}$/.test(value) ? 1.0 : 0.6;
+                    confidence = /^\d{4}-\d{2}-\d{2}$/.test(value as string) ? 1.0 : 0.6;
                 } else if (typeof value === 'number' && value > 0) {
                     confidence = 1.0;
                 } else {

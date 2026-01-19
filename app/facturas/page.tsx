@@ -158,6 +158,40 @@ export default function FacturasPage() {
         } catch (e) { console.error(e); alert('Error'); }
     };
 
+    const handleBulkUnexport = async () => {
+        // Get selected invoices that are exported
+        const selectedInvoices = invoices.filter(inv => selectedIds.includes(inv.id));
+        const exportedInvoices = selectedInvoices.filter(inv => inv.estado === 'exportada');
+
+        if (exportedInvoices.length === 0) {
+            alert('ℹ️ Ninguna de las facturas seleccionadas está exportada.');
+            return;
+        }
+
+        const invoiceNumbers = exportedInvoices.map(inv => inv.numero_factura).join(', ');
+        const proceed = confirm(
+            `¿Desexportar ${exportedInvoices.length} factura(s)?\n\n${invoiceNumbers}\n\n` +
+            `Esto las devolverá al estado "Validada" y permitirá exportarlas nuevamente.`
+        );
+        if (!proceed) return;
+
+        try {
+            const exportedIds = exportedInvoices.map(inv => inv.id);
+            const res = await fetch('/api/facturas', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: exportedIds, estado: 'validada' }),
+            });
+            if (res.ok) {
+                fetchInvoices();
+                setSelectedIds([]);
+                alert('✅ Facturas desexportadas correctamente');
+            } else {
+                alert('Error al desexportar');
+            }
+        } catch (e) { console.error(e); alert('Error'); }
+    };
+
     const fetchInvoices = async () => {
         setLoading(true);
         try {
@@ -617,6 +651,19 @@ export default function FacturasPage() {
                         style={{ borderRadius: '20px', padding: '8px 20px' }}
                     >
                         ✅ Validar
+                    </button>
+                    <button
+                        onClick={handleBulkUnexport}
+                        className="btn"
+                        style={{
+                            borderRadius: '20px',
+                            padding: '8px 20px',
+                            backgroundColor: '#fef3c7',
+                            color: '#92400e',
+                            border: '1px solid #fcd34d'
+                        }}
+                    >
+                        🔄 Desexportar
                     </button>
                     <button
                         onClick={handleExport}
